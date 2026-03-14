@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes - Historique Recharges</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .text-gold { color: #d4af37; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-md mx-auto">
+        <button onclick="history.back()" class="text-gold text-sm mb-6">← Retour</button>
+        <h2 class="text-2xl font-bold text-white mb-6 uppercase tracking-widest text-center">Historique Recharges</h2>
+        
+        <div id="rechargeList" class="space-y-4">
+            <p class="text-center text-gray-500 mt-10">Chargement de vos transactions...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, query, orderByChild, equalTo, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // CONFIGURATION RÉELLE DE TA CONSOLE
+        const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        const userPhone = localStorage.getItem('userPhone');
+        const list = document.getElementById('rechargeList');
+        
+        if (!userPhone) {
+            window.location.href = "index.html";
+        } else {
+            // Requête pour filtrer les recharges de l'utilisateur actuel
+            const rechargesRef = ref(db, 'recharges');
+            const q = query(rechargesRef, orderByChild('user'), equalTo(userPhone));
+            
+            onValue(q, (snap) => {
+                list.innerHTML = '';
+                
+                if(!snap.exists()) { 
+                    list.innerHTML = '<p class="text-center text-gray-500 mt-10">Aucune recharge trouvée dans votre historique.</p>'; 
+                    return; 
+                }
+                
+                // On transforme l'objet en tableau pour pouvoir l'inverser (plus récent en haut)
+                const items = [];
+                snap.forEach((child) => {
+                    items.push(child.val());
+                });
+                items.reverse(); 
+
+                items.forEach((d) => {
+                    // Couleur du statut
+                    let statusColor = "text-yellow-500";
+                    if(d.statut === "Validé" || d.statut === "Terminé") statusColor = "text-green-500";
+                    if(d.statut === "Refusé") statusColor = "text-red-500";
+
+                    list.innerHTML += `
+                    <div class="glass p-5 rounded-2xl flex justify-between items-center transition hover:bg-white/10">
+                        <div>
+                            <p class="font-bold text-lg text-white">${d.vip || 'RECHARGE'}</p>
+                            <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">${d.reseau || 'Mobile'} • ${d.date ? d.date.split(',')[0] : 'Récemment'}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gold font-bold">${Number(d.montant || 0).toLocaleString()} FC</p>
+                            <span class="text-[10px] font-bold ${statusColor}">${d.statut || 'En attente'}</span>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
