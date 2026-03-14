@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes-Benz - Connexion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; font-family: 'Outfit', sans-serif; height: 100vh; display: flex; align-items: center; justify-content: center; background: url('IMG_3267.jpeg') no-repeat center center fixed; background-size: cover; }
+        .login-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(15px); padding: 40px; border-radius: 30px; width: 100%; max-width: 350px; border: 1px solid rgba(255,255,255,0.2); color: white; text-align: center; }
+        h1 { font-size: 24px; margin-bottom: 25px; letter-spacing: 1px; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.9); box-sizing: border-box; font-family: inherit; color: #000; }
+        button { width: 100%; padding: 15px; margin-top: 20px; border-radius: 12px; border: none; background: #000; color: #fff; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #333; }
+        .link { font-size: 13px; margin-top: 20px; display: block; color: white; text-decoration: none; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h1>MERCEDES-BENZ</h1>
+        <input type="tel" id="phone" placeholder="+243 (Numéro)" maxlength="13">
+        <input type="password" id="password" placeholder="Mot de passe (6 chiffres)" maxlength="6">
+        <button onclick="login()">SE CONNECTER</button>
+        <a href="register.html" class="link">Pas encore de compte ? S'inscrire</a>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // CONFIGURATION CORRIGÉE AVEC TON LIEN RÉEL
+        const firebaseConfig = {
+            databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.login = async () => {
+            const phone = document.getElementById('phone').value.replace(/\s+/g, '');
+            const pass = document.getElementById('password').value;
+
+            if(!phone || !pass) return alert("Veuillez remplir tous les champs.");
+
+            try {
+                // On cherche l'utilisateur dans la branche 'users' de TA console
+                const snapshot = await get(ref(db, 'users/' + phone));
+                
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.password === pass) {
+                        localStorage.setItem('userPhone', phone);
+                        // Stocker aussi le code de parrainage pour la page équipe
+                        localStorage.setItem('userCode', userData.mon_code); 
+                        window.location.href = "dashboard.html";
+                    } else {
+                        alert("Mot de passe incorrect.");
+                    }
+                } else {
+                    alert("Numéro non trouvé sur cette plateforme.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erreur de connexion à la base de données.");
+            }
+        };
+    </script>
+</body>
+</html>
