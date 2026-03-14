@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes - Recharge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-vip { border: 2px solid #d4af37 !important; background: rgba(212, 175, 55, 0.2); }
+        .glass { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .text-gold { color: #d4af37; }
+    </style>
+</head>
+<body class="bg-black text-white p-4">
+
+<div class="max-w-md mx-auto">
+    <h2 class="text-gold font-bold mb-4 text-center tracking-widest">SÉLECTION VIP</h2>
+    <div id="gridVip" class="grid grid-cols-2 gap-2 mb-8"></div>
+
+    <div id="rechargeSection" class="glass p-4 rounded-xl">
+        <h2 class="text-white font-bold mb-4 text-sm uppercase">Paiement</h2>
+        
+        <div class="grid grid-cols-3 gap-2 mb-4" id="netGroup">
+            <button onclick="setNet(this, 'M-Pesa', '0813944647')" class="glass p-2 rounded text-[10px] font-bold">M-Pesa</button>
+            <button onclick="setNet(this, 'Airtel', '0960935335')" class="glass p-2 rounded text-[10px] font-bold">Airtel</button>
+            <button onclick="setNet(this, 'Orange', '0891658826')" class="glass p-2 rounded text-[10px] font-bold">Orange</button>
+        </div>
+
+        <div id="agentBox" class="hidden p-3 bg-yellow-900/20 rounded-lg border border-yellow-600/30 text-center mb-4">
+            <p class="text-[9px] text-yellow-600">ENVOYER SUR</p>
+            <p id="agentPhone" class="font-bold tracking-widest text-lg">---</p>
+        </div>
+
+        <input type="tel" id="senderPhone" placeholder="Votre numéro de transfert" class="w-full bg-white/5 p-3 rounded mb-3 text-sm border border-white/10 outline-none focus:border-yellow-600">
+        
+        <input type="text" id="transID" placeholder="ID Transaction (Preuve SMS)" class="w-full bg-white/5 p-3 rounded mb-4 text-sm border border-white/10 outline-none focus:border-yellow-600">
+        
+        <button id="btnValider" onclick="valider()" class="w-full bg-yellow-600 text-black font-bold p-3 rounded uppercase">Confirmer la recharge</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // CONFIGURATION RÉELLE DE TA CONSOLE
+    const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const vips = [
+        {n: "VIP 1", p: 5000}, {n: "VIP 2", p: 18000}, {n: "VIP 3", p: 65000},
+        {n: "VIP 4", p: 260000}, {n: "VIP 5", p: 470000}, {n: "VIP 6", p: 1000000}, {n: "VIP 7", p: 2500000}
+    ];
+
+    let selectedVip = null, selectedNet = null, agentNumber = "";
+
+    const grid = document.getElementById('gridVip');
+    vips.forEach(v => {
+        const div = document.createElement('div');
+        div.className = 'glass p-3 rounded cursor-pointer text-center transition';
+        div.innerHTML = `<div class="text-gold font-bold text-xs">${v.n}</div><div class="text-[9px] opacity-80">${v.p.toLocaleString()} FC</div>`;
+        div.onclick = function() {
+            document.querySelectorAll('#gridVip > div').forEach(c => c.classList.remove('active-vip'));
+            div.classList.add('active-vip');
+            selectedVip = v;
+        };
+        grid.appendChild(div);
+    });
+
+    window.setNet = (el, net, phone) => {
+        document.querySelectorAll('#netGroup button').forEach(b => b.classList.remove('active-vip'));
+        el.classList.add('active-vip');
+        selectedNet = net;
+        agentNumber = phone;
+        document.getElementById('agentBox').classList.remove('hidden');
+        document.getElementById('agentPhone').innerText = phone;
+    };
+
+    window.valider = async () => {
+        const sender = document.getElementById('senderPhone').value.trim();
+        const tid = document.getElementById('transID').value.trim();
+        const userPhone = localStorage.getItem('userPhone');
+
+        if(!selectedVip || !selectedNet || !sender || !tid) {
+            return alert("Veuillez remplir tous les champs !");
+        }
+
+        const btn = document.getElementById('btnValider');
+        btn.disabled = true;
+        btn.innerText = "ENVOI EN COURS...";
+
+        try {
+            // Création de la demande dans la branche 'recharges'
+            const rechargeRef = ref(db, 'recharges');
+            const newRechargeRef = push(rechargeRef);
+            
+            await set(newRechargeRef, {
+                id_demande: newRechargeRef.key,
+                user: userPhone || "Inconnu",
+                vip: selectedVip.n,
+                montant: selectedVip.p,
+                reseau: selectedNet,
+                agent: agentNumber,
+                numero_expediteur: sender,
+                transaction_id: tid,
+                statut: "En attente",
+                date: new Date().toLocaleString()
+            });
+
+            alert("Demande envoyée avec succès ! Votre solde sera crédité après vérification de l'ID : " + tid);
+            window.location.href = "dashboard.html";
+
+        } catch (error) {
+            console.error(error);
+            alert("Erreur lors de l'envoi. Vérifiez votre connexion.");
+            btn.disabled = false;
+            btn.innerText = "Confirmer la recharge";
+        }
+    };
+</script>
+</body>
+</html>
