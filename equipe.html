@@ -18,7 +18,7 @@
         .text-gold { color: #d4af37; }
     </style>
 </head>
-<body class="p-4 md:p-6 pb-24">
+<body class="p-4 md:p-6">
 
     <div class="max-w-md mx-auto">
         <header class="text-center mb-8">
@@ -27,8 +27,8 @@
         </header>
 
         <div class="glass p-5 rounded-2xl mb-6 text-center cursor-pointer transition hover:bg-white/10" onclick="copyLink()">
-            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Votre lien partenaire (Cliquez pour copier)</p>
-            <p id="refLink" class="text-gold font-mono text-sm break-all">Chargement du lien...</p>
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Votre lien partenaire</p>
+            <p id="refLink" class="text-gold font-mono text-sm break-all">Chargement...</p>
         </div>
 
         <div class="grid grid-cols-2 gap-4 mb-6">
@@ -38,7 +38,7 @@
             </div>
             <div class="glass p-4 rounded-2xl text-center">
                 <div id="totalTeam" class="text-2xl font-bold text-white">0</div>
-                <div class="text-[9px] text-gray-400 uppercase font-bold">Membres Total</div>
+                <div class="text-[9px] text-gray-400 uppercase font-bold">Membres</div>
             </div>
         </div>
 
@@ -46,7 +46,7 @@
             <div class="glass p-4 rounded-xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold">L1</div>
-                    <div><p class="text-sm font-semibold">Niveau 1</p><p class="text-[10px] text-gray-400">Direct (30%)</p></div>
+                    <div><p class="text-sm font-semibold">Direct</p><p class="text-[10px] text-gray-400">30% commission</p></div>
                 </div>
                 <div id="countL1" class="text-lg font-bold">0</div>
             </div>
@@ -54,17 +54,17 @@
             <div class="glass p-4 rounded-xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold">L2</div>
-                    <div><p class="text-sm font-semibold">Niveau 2</p><p class="text-[10px] text-gray-400">Indirect (3%)</p></div>
+                    <div><p class="text-sm font-semibold">Indirect</p><p class="text-[10px] text-gray-400">3% commission</p></div>
                 </div>
                 <div id="countL2" class="text-lg font-bold">0</div>
             </div>
 
             <div class="glass p-4 rounded-xl flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold">L3</div>
-                    <div><p class="text-sm font-semibold">Niveau 3</p><p class="text-[10px] text-gray-400">Réseau (1%)</p></div>
+                    <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-bold">L4</div>
+                    <div><p class="text-sm font-semibold">Réseau</p><p class="text-[10px] text-gray-400">1% commission</p></div>
                 </div>
-                <div id="countL3" class="text-lg font-bold">0</div>
+                <div id="countL4" class="text-lg font-bold">0</div>
             </div>
         </section>
     </div>
@@ -73,56 +73,54 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+        // CONFIGURATION RÉELLE DE TA BASE DE DONNÉES
+        const firebaseConfig = {
+            databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com"
+        };
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
         
         const myCode = localStorage.getItem('userCode');
-        const baseUrl = "https://drc00.github.io/Mercedesbenzinvst/register.html"; // TON LIEN FONCTIONNEL
-
-        if (myCode) {
-            document.getElementById('refLink').innerText = baseUrl + "?ref=" + myCode;
-        }
 
         onValue(ref(db, 'users'), (snap) => {
             if (!snap.exists()) return;
 
-            const users = Object.values(snap.val());
+            const usersData = snap.val();
+            const users = Object.values(usersData);
             
-            // Stats de l'utilisateur actuel
             const me = users.find(u => u.mon_code === myCode);
+            
             if (me) {
                 document.getElementById('totalCom').innerText = (me.total_commissions || 0).toLocaleString();
+                
+                // LIEN EXACT POUR GITHUB PAGES
+                const baseUrl = "https://mercedes7o.github.io/Mercedes-benzinvest";
+                document.getElementById('refLink').innerText = baseUrl + "/register.html?ref=" + myCode;
+
+                const l1 = users.filter(u => u.parraine_par === myCode);
+                const l1Codes = l1.map(u => u.mon_code);
+                
+                const l2 = users.filter(u => l1Codes.includes(u.parraine_par));
+                const l2Codes = l2.map(u => u.mon_code);
+                
+                const l3 = users.filter(u => l2Codes.includes(u.parraine_par));
+                const l3Codes = l3.map(u => u.mon_code);
+                
+                const l4 = users.filter(u => l3Codes.includes(u.parraine_par));
+
+                document.getElementById('countL1').innerText = l1.length;
+                document.getElementById('countL2').innerText = l2.length;
+                document.getElementById('countL4').innerText = l4.length;
+                
+                document.getElementById('totalTeam').innerText = (l1.length + l2.length + l4.length);
             }
-
-            // --- CALCUL DE L'ÉQUIPE (GÉNÉALOGIE) ---
-            
-            // Niveau 1 : Ceux que j'ai parrainés directement
-            const l1 = users.filter(u => u.parraine_par === myCode);
-            const l1Codes = l1.map(u => u.mon_code);
-            
-            // Niveau 2 : Ceux parrainés par mon L1
-            const l2 = users.filter(u => l1Codes.includes(u.parraine_par));
-            const l2Codes = l2.map(u => u.mon_code);
-            
-            // Niveau 3 : Ceux parrainés par mon L2
-            const l3 = users.filter(u => l2Codes.includes(u.parraine_par));
-
-            // Mise à jour de l'affichage
-            document.getElementById('countL1').innerText = l1.length;
-            document.getElementById('countL2').innerText = l2.length;
-            document.getElementById('countL3').innerText = l3.length;
-            
-            document.getElementById('totalTeam').innerText = (l1.length + l2.length + l3.length);
         });
 
         window.copyLink = () => {
             const text = document.getElementById('refLink').innerText;
-            if(text.includes("Chargement")) return;
-            
-            navigator.clipboard.writeText(text).then(() => {
-                alert("Lien de parrainage copié ! Partagez-le pour gagner des commissions.");
-            });
+            if(text === "Chargement...") return;
+            navigator.clipboard.writeText(text);
+            alert("Lien copié !");
         };
     </script>
 </body>
