@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes | Mon Profil</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { 
+            background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url('IMG_3271.jpeg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            color: #fff; 
+            font-family: 'Inter', sans-serif;
+        }
+        .glass { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); }
+        .text-gold { color: #d4af37; }
+    </style>
+</head>
+<body class="p-4 md:p-6 pb-20">
+
+    <div class="max-w-md mx-auto">
+        <header class="text-center mb-8">
+            <div class="w-24 h-24 mx-auto rounded-full bg-white/10 flex items-center justify-center border-2 border-gold mb-4 text-3xl font-bold text-gold">M</div>
+            <h1 id="userName" class="text-2xl font-bold">Chargement...</h1>
+            <p id="userPhoneDisplay" class="text-gray-400 text-sm">Chargement...</p>
+        </header>
+
+        <section class="grid grid-cols-1 gap-4">
+            
+            <div class="glass p-5 rounded-2xl">
+                <h3 class="text-gold font-bold mb-3 uppercase text-xs tracking-widest">Historique</h3>
+                <div class="space-y-2">
+                    <button onclick="window.location.href='historique_retrait.html'" class="w-full text-left p-3 hover:bg-white/5 rounded-lg flex justify-between">
+                        <span>Historique Retrait</span> <span>→</span>
+                    </button>
+                    <button onclick="window.location.href='historique_recharge.html'" class="w-full text-left p-3 hover:bg-white/5 rounded-lg flex justify-between">
+                        <span>Historique Recharge</span> <span>→</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass p-5 rounded-2xl">
+                <h3 class="text-gold font-bold mb-3 uppercase text-xs tracking-widest">Mon Compte</h3>
+                <button onclick="window.location.href='mes_produits.html'" class="w-full text-left p-3 hover:bg-white/5 rounded-lg flex justify-between">
+                    <span>Mes Produits</span> <span>→</span>
+                </button>
+            </div>
+
+            <button onclick="logout()" class="w-full bg-red-900/20 text-red-400 p-4 rounded-2xl font-bold border border-red-900/50 hover:bg-red-900/40 transition">
+                Déconnexion
+            </button>
+        </section>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // URL CORRIGÉE VERS TA CONSOLE RÉELLE
+        const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        const userPhone = localStorage.getItem('userPhone');
+
+        if (userPhone) {
+            onValue(ref(db, 'users/' + userPhone), (snap) => {
+                const data = snap.val();
+                if (data) {
+                    // Si tu n'as pas de champ "name", on affiche "Investisseur" par défaut
+                    document.getElementById('userName').innerText = data.name || "Investisseur Mercedes";
+                    document.getElementById('userPhoneDisplay').innerText = userPhone;
+                }
+            });
+        } else {
+            window.location.href = "index.html"; // Redirige si non connecté
+        }
+
+        window.logout = () => {
+            localStorage.clear();
+            window.location.href = "index.html"; 
+        };
+    </script>
+</body>
+</html>
