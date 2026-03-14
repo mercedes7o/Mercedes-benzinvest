@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes-Benz - Boutique VIP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; font-family: 'Outfit', sans-serif; background: #000; color: #fff; padding-bottom: 90px; }
+        .header { padding: 40px 20px; text-align: center; }
+        .solde-box { background: rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 15px; text-align: center; margin: 0 20px 20px; font-weight: 600; border: 1px solid rgba(212, 175, 55, 0.3); }
+        .solde-amount { color: #d4af37; font-size: 20px; }
+        
+        .container { padding: 0 20px; display: grid; gap: 20px; }
+        
+        .product-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 25px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); padding: 15px; }
+        .product-img { width: 100%; height: 180px; object-fit: cover; border-radius: 15px; margin-bottom: 15px; }
+        .vip-tag { font-weight: 600; color: #d4af37; margin-bottom: 5px; font-size: 14px; }
+        .price { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+        .details { font-size: 13px; opacity: 0.8; margin-bottom: 15px; line-height: 1.6; }
+        .details b { color: #fff; }
+        
+        .btn-invest { width: 100%; padding: 14px; background: #fff; color: #000; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-invest:active { transform: scale(0.95); opacity: 0.8; }
+        
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 20px 0; border-top: 1px solid #333; backdrop-filter: blur(20px); }
+        .nav-item { text-align: center; cursor: pointer; color: #888; font-size: 10px; font-weight: 600; }
+        .nav-item.active { color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 style="margin:0; font-size: 24px; letter-spacing: 2px;">BOUTIQUE VIP</h1>
+    </div>
+
+    <div class="solde-box">
+        Solde actuel : <br>
+        <span class="solde-amount" id="userBalance">0</span> <span style="color:#d4af37">FC</span>
+    </div>
+
+    <div class="container" id="productList"></div>
+
+    <div class="nav-bar">
+        <div class="nav-item" onclick="location.href='dashboard.html'">⟐<br>ACCUEIL</div>
+        <div class="nav-item active" onclick="location.href='produits.html'">🏎️<br>PRODUITS</div>
+        <div class="nav-item" onclick="location.href='equipe.html'">◈<br>ÉQUIPE</div>
+        <div class="nav-item" onclick="location.href='profil.html'">👤<br>PROFIL</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // URL CORRIGÉE VERS TA CONSOLE RÉELLE
+        const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        const userPhone = localStorage.getItem('userPhone') || "243810000000";
+
+        // 1. Charger le solde de l'utilisateur
+        onValue(ref(db, 'users/' + userPhone), (snap) => {
+            if(snap.exists()) {
+                const solde = snap.val().solde || 0;
+                document.getElementById('userBalance').innerText = Number(solde).toLocaleString();
+            }
+        });
+
+        // 2. Configuration des produits
+        const plans = [
+            { id: 1, img: "IMG_3265.jpeg", price: 5000, daily: 2000, total: 360000 },
+            { id: 2, img: "IMG_3266.jpeg", price: 18000, daily: 4600, total: 828000 },
+            { id: 3, img: "IMG_3267.jpeg", price: 65000, daily: 12000, total: 2160000 },
+            { id: 4, img: "IMG_3271.jpeg", price: 260000, daily: 42000, total: 7560000 },
+            { id: 5, img: "IMG_3272.jpeg", price: 470000, daily: 120000, total: 21600000 },
+            { id: 6, img: "IMG_3273.jpeg", price: 1000000, daily: 350000, total: 63000000 },
+            { id: 7, img: "IMG_3274.jpeg", price: 2500000, daily: 480000, total: 86400000 }
+        ];
+
+        // 3. Affichage des produits
+        const list = document.getElementById('productList');
+        plans.forEach(p => {
+            list.innerHTML += `
+                <div class="product-card">
+                    <img src="${p.img}" class="product-img">
+                    <div class="vip-tag">MERCEDES VIP ${p.id}</div>
+                    <div class="price">${p.price.toLocaleString()} FC</div>
+                    <div class="details">
+                        • Revenu journalier : <b>${p.daily.toLocaleString()} FC</b><br>
+                        • Revenu total (180j) : <b>${p.total.toLocaleString()} FC</b>
+                    </div>
+                    <button class="btn-invest" onclick="acheter(${p.price}, ${p.id})">INVESTIR MAINTENANT</button>
+                </div>
+            `;
+        });
+
+        // 4. Fonction d'achat
+        window.acheter = async (prix, id) => {
+            const userRef = ref(db, 'users/' + userPhone);
+            const snap = await get(userRef);
+            
+            if(!snap.exists()) return alert("Utilisateur non trouvé.");
+            
+            const currentSolde = Number(snap.val().solde || 0);
+
+            if(currentSolde < prix) {
+                alert("Solde insuffisant ! Veuillez recharger votre compte.");
+            } else {
+                if(confirm(`Confirmer l'investissement VIP ${id} pour ${prix.toLocaleString()} FC ?`)) {
+                    await update(userRef, { solde: currentSolde - prix });
+                    alert("Investissement réussi ! Vos revenus seront crédités chaque jour.");
+                }
+            }
+        };
+    </script>
+</body>
+</html>
