@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes-Benz - Espace Investisseur</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; font-family: 'Outfit', sans-serif; background: url('IMG_3265.jpeg') no-repeat center center fixed; background-size: cover; color: #fff; padding-bottom: 90px; }
+        .overlay { background: rgba(0, 0, 0, 0.75); min-height: 100vh; padding: 20px; }
+        
+        .header-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); padding: 40px 20px; border-radius: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .balance-label { font-size: 11px; opacity: 0.6; text-transform: uppercase; letter-spacing: 2px; }
+        .balance { font-size: 42px; font-weight: 700; margin: 10px 0; color: #fff; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 14px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; font-size: 13px; }
+        .btn-depot { background: #fff; color: #000; }
+        .btn-retrait { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+
+        /* Section Annonces */
+        .announcement { background: rgba(0, 0, 0, 0.5); padding: 20px; border-radius: 20px; border-left: 4px solid #fff; margin-bottom: 25px; }
+        .announcement a { color: #fff; display: block; margin-top: 10px; font-weight: 600; text-decoration: none; font-size: 13px; }
+
+        .about-section { line-height: 1.6; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+        .about-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; letter-spacing: 1px; }
+        .about-text { font-size: 12px; opacity: 0.7; font-weight: 300; text-align: justify; }
+
+        .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 20px 0; border-top: 1px solid #333; backdrop-filter: blur(20px); z-index: 100; }
+        .nav-item { text-align: center; cursor: pointer; color: #888; font-size: 10px; font-weight: 600; }
+        .nav-item.active { color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        
+        <div class="header-card">
+            <div class="balance-label">Solde Actuel</div>
+            <div class="balance" id="currentBalance">0 FC</div>
+            <div class="btn-group">
+                <button class="btn btn-depot" onclick="location.href='recharge.html'">RECHARGER</button>
+                <button class="btn btn-retrait" onclick="location.href='retrait.html'">RETIRER</button>
+            </div>
+        </div>
+
+        <div class="announcement">
+            <div style="font-size: 16px; font-weight: 600;">📢 Annonces Officielles</div>
+            <a href="https://t.me/benz625">➤ Groupe Telegram (Info)</a>
+            <a href="https://t.me/+NWdEYdtak705YTU0">➤ Support Client (VIP)</a>
+        </div>
+
+        <div class="about-section">
+            <div class="about-title">MERCEDES-BENZ GLOBAL INVESTMENT</div>
+            <p class="about-text">
+                Symbole mondial de l'excellence automobile, Mercedes-Benz incarne l'innovation et le luxe. Notre plateforme permet aux investisseurs de s'associer à cette vision d'avenir. En rejoignant notre écosystème, vous participez au développement de solutions de mobilité durable, générant des rendements basés sur une expertise industrielle mondiale. L'excellence est notre héritage, la croissance est votre résultat.
+            </p>
+        </div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="location.href='dashboard.html'">⟐<br>ACCUEIL</div>
+        <div class="nav-item" onclick="location.href='produits.html'">🏎️<br>PRODUITS</div>
+        <div class="nav-item" onclick="location.href='equipe.html'">◈<br>ÉQUIPE</div>
+        <div class="nav-item" onclick="location.href='profil.html'">👤<br>PROFIL</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // CONFIGURATION CORRIGÉE
+        const firebaseConfig = {
+            databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Récupération de l'utilisateur
+        const userPhone = localStorage.getItem('userPhone');
+
+        // Sécurité : Si pas de numéro, retour à la connexion
+        if(!userPhone) {
+            window.location.href = "index.html";
+        } else {
+            // Lecture du solde en temps réel
+            onValue(ref(db, 'users/' + userPhone), (snap) => {
+                if(snap.exists()) {
+                    const val = snap.val().solde || 0;
+                    document.getElementById('currentBalance').innerText = Number(val).toLocaleString() + " FC";
+                } else {
+                    document.getElementById('currentBalance').innerText = "0 FC";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
