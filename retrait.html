@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercedes - Retrait</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
+        .active-net { border: 2px solid #d4af37 !important; background: rgba(212, 175, 55, 0.2); }
+        .btn-ready { background-color: #d4af37 !important; color: black !important; cursor: pointer; }
+        .text-gold { color: #d4af37; }
+    </style>
+</head>
+<body class="bg-black text-white p-4">
+
+<div class="max-w-md mx-auto">
+    <div class="mb-8 text-center">
+        <h1 class="text-2xl font-bold uppercase tracking-widest text-white">Retrait</h1>
+        <p class="text-gray-400 text-sm mt-2">Solde : <span id="balanceDisplay" class="text-gold font-bold">0</span> FC</p>
+    </div>
+
+    <div class="glass p-4 rounded-xl mb-4">
+        <p class="text-[10px] font-bold text-gray-400 uppercase mb-3">Choisir le réseau</p>
+        <div class="grid grid-cols-3 gap-2" id="netGroup">
+            <button class="glass p-3 rounded text-xs font-bold hover:bg-white/10 transition" data-net="M-Pesa">M-Pesa</button>
+            <button class="glass p-3 rounded text-xs font-bold hover:bg-white/10 transition" data-net="Airtel">Airtel</button>
+            <button class="glass p-3 rounded text-xs font-bold hover:bg-white/10 transition" data-net="Orange">Orange</button>
+        </div>
+    </div>
+
+    <div class="glass p-4 rounded-xl space-y-4">
+        <input id="recipientPhone" type="tel" class="w-full bg-black/40 p-4 rounded-lg border border-white/10 text-white outline-none focus:border-gold" placeholder="Numéro de réception">
+        <input id="amount" type="number" class="w-full bg-black/40 p-4 rounded-lg border border-white/10 text-white outline-none focus:border-gold" placeholder="Montant (Min. 7.000 FC)">
+        
+        <div id="fraisMsg" class="text-[10px] text-gold font-bold bg-yellow-600/10 p-3 rounded border border-yellow-600/20">
+            Frais 15% | Net : 0 FC
+        </div>
+
+        <button id="btnValider" class="w-full bg-gray-700 text-gray-500 font-bold p-4 rounded-lg transition uppercase">
+            Confirmer le retrait
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, push, set, update, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    // CONFIGURATION RÉELLE DE TA CONSOLE
+    const firebaseConfig = { databaseURL: "https://mercedbenzinvest-default-rtdb.firebaseio.com" };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    const userPhone = localStorage.getItem('userPhone');
+    if(!userPhone) window.location.href = "index.html";
+    
+    let selectNet = "";
+    let currentBalance = 0;
+
+    const btn = document.getElementById('btnValider');
+    const amountInput = document.getElementById('amount');
+    const phoneInput = document.getElementById('recipientPhone');
+    const fraisMsg = document.getElementById('fraisMsg');
+
+    // Récupération du solde en temps réel
+    onValue(ref(db, 'users/' + userPhone), (snap) => {
+        if(snap.exists()) {
+            currentBalance = snap.val().solde || 0;
+            document.getElementById('balanceDisplay').innerText = Number(currentBalance).toLocaleString();
+        }
+    });
+
+    // Gestion réseau
+    document.querySelectorAll('#netGroup button').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('#netGroup button').forEach(btnEl => btnEl.classList.remove('active-net'));
+            b.classList.add('active-net');
+            selectNet = b.getAttribute('data-net');
+            checkForm();
+        });
+    });
+
+    // Calcul frais
+    amountInput.addEventListener('input', () => {
+        const amount = parseFloat(amountInput.value) || 0;
+        const frais = amount * 0.15;
+        const net = amount - frais;
+        fraisMsg.innerText = `Frais (15%): ${frais.toLocaleString()} FC | Net : ${net.toLocaleString()} FC`;
+        checkForm();
+    });
+
+    // Activation bouton
+    const checkForm = () => {
+        const amount = parseFloat(amountInput.value) || 0;
+        if(selectNet && amount >= 7000 && phoneInput.value.length >= 9 && amount <= currentBalance) {
+            btn.classList.add('btn-ready');
+            btn.style.color = "black";
+        } else {
+            btn.classList.remove('btn-ready');
+            btn.style.color = "";
+        }
+    };
+
+    phoneInput.addEventListener('input', checkForm);
+
+    // Validation finale
+    btn.addEventListener('click', async () => {
+        const amount = parseFloat(amountInput.value);
+        
+        if(!btn.classList.contains('btn-ready')) {
+            if(amount > currentBalance) return alert("Solde insuffisant !");
+            return alert("Veuillez remplir correctement les champs.");
+        }
+
+        if(confirm(`Confirmer le retrait de ${amount.toLocaleString()} FC ?`)) {
+            btn.disabled = true;
+            btn.innerText = "ENVOI...";
+
+            try {
+                // 1. Déduire le montant du solde de l'utilisateur d'abord
+                const userRef = ref(db, 'users/' + userPhone);
+                await update(userRef, { solde: currentBalance - amount });
+
+                // 2. Créer la demande de retrait pour l'admin
+                const retraitRef = ref(db, 'retraits');
+                const newRetraitRef = push(retraitRef);
+                
+                await set(newRetraitRef, {
+                    id_retrait: newRetraitRef.key,
+                    phone_compte: userPhone,
+                    receveur: phoneInput.value,
+                    reseau: selectNet,
+                    montant_brut: amount,
+                    montant_net: amount * 0.85,
+                    date: new Date().toLocaleString(),
+                    status: "EN_ATTENTE"
+                });
+
+                alert("✅ Demande envoyée ! Le solde a été mis à jour.");
+                window.location.href = "dashboard.html";
+
+            } catch (error) {
+                console.error(error);
+                alert("Erreur lors de la transaction.");
+                btn.disabled = false;
+                btn.innerText = "Confirmer le retrait";
+            }
+        }
+    });
+</script>
+</body>
+</html>
